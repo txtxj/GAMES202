@@ -6,4 +6,4 @@ cmake-build-debug/
 lib/
 assets/
 
-.pdf
+*.pdf
