@@ -13,3 +13,20 @@
     </tr></table>
 </details>
 
+<details>
+    <summary><strong>作业 1</strong></summary>
+    <table><tr>
+        <td>
+            <img src="Image/hw1/ShadowMap.png" border=0>
+            <p style="display: block; text-align: center; color: #969696;padding: 10px;">Shadow Map</p>
+        </td>
+        <td>
+            <img src="Image/hw1/PCF.png" border=0>
+            <p style="display: block; text-align: center; color: #969696;padding: 10px;">PCF</p>
+        </td>
+        <td>
+            <img src="Image/hw1/PCSS.png" border=0>
+            <p style="display: block; text-align: center; color: #969696;padding: 10px;">PCSS</p>
+        </td>
+    </tr></table>
+</details>
