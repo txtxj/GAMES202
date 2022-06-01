@@ -15,7 +15,7 @@ varying highp vec3 vFragPos;
 varying highp vec3 vNormal;
 
 // Shadow map related variables
-#define NUM_SAMPLES 20
+#define NUM_SAMPLES 100
 #define BLOCKER_SEARCH_NUM_SAMPLES NUM_SAMPLES
 #define PCF_NUM_SAMPLES NUM_SAMPLES
 #define NUM_RINGS 10
@@ -23,6 +23,8 @@ varying highp vec3 vNormal;
 #define EPS 1e-3
 #define PI 3.141592653589793
 #define PI2 6.283185307179586
+
+#define LIGHTSIZE 0.02
 
 uniform sampler2D uShadowMap;
 
@@ -83,29 +85,65 @@ void uniformDiskSamples( const in vec2 randomSeed ) {
   }
 }
 
-float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
-	return 1.0;
+float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver) {
+	float vis = 0.0;
+  float sum = 0.0;
+  float bias = 0.002;
+  float siz = 0.02;
+  for (int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; i++)
+  {
+    float depth = unpack(texture2D(shadowMap, uv + poissonDisk[i] * siz));
+    if (abs(depth) < EPS)
+    {
+      depth = 1.0;
+    }
+    float nBlock = step(zReceiver - bias, depth);
+    if (nBlock < EPS)
+    {
+      vis += 1.0;
+      sum += depth;
+    }
+  }
+  return sum / vis;
 }
 
-float PCF(sampler2D shadowMap, vec4 coords) {
-  return 1.0;
+float PCF(sampler2D shadowMap, vec4 coords, float siz) {
+  float vis = 0.0;
+  float bias = 0.002;
+  for (int i = 0; i < NUM_SAMPLES; i++)
+  {
+    float depth = unpack(texture2D(shadowMap, coords.xy + poissonDisk[i] * siz));
+    if (abs(depth) < EPS)
+    {
+      depth = 1.0;
+    }
+    vis += step(coords.z - bias, depth);
+  }
+  return vis / float(NUM_SAMPLES);
 }
 
 float PCSS(sampler2D shadowMap, vec4 coords){
 
   // STEP 1: avgblocker depth
+  float depth = findBlocker(shadowMap, coords.xy, coords.z);
 
   // STEP 2: penumbra size
+  float w = (coords.z / depth - 1.0) * LIGHTSIZE;
 
   // STEP 3: filtering
+  float vis = PCF(shadowMap, coords, w);
   
-  return 1.0;
+  return vis;
 
 }
 
 
 float useShadowMap(sampler2D shadowMap, vec4 shadowCoord){
   float depth = unpack(texture2D(shadowMap, shadowCoord.xy));
+  if (abs(depth) < EPS)
+  {
+    depth = 1.0;
+  }
   return step(shadowCoord.z, depth);
 }
 
@@ -133,12 +171,14 @@ vec3 blinnPhong() {
 }
 
 void main(void) {
+  poissonDiskSamples(vTextureCoord);
+  //uniformDiskSamples(vTextureCoord);
 
   float visibility;
   vec3 shadowCoord = (vPositionFromLight.xyz / vPositionFromLight.w + 1.0) / 2.0;
-  visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
-  //visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0));
-  //visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
+  //visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
+  //visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0), 0.025);
+  visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
 
   vec3 phongColor = blinnPhong();
 
